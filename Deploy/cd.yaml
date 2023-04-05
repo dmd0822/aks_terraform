@@ -1,0 +1,78 @@
+name: TF-Infra-Deploy_$(date:yyyyMMdd)$(rev:.r)
+trigger:
+- main
+
+stages:
+  - stage: Dev
+    displayName: Deploy to Dev
+    jobs:
+    - deployment: DeployDev      
+      pool:
+        vmImage: ubuntu-latest
+      environment: 'sandbox-dev'
+      strategy:
+        runOnce:
+          deploy:
+            steps:
+            - checkout: self
+            - task: ms-devlabs.custom-terraform-tasks.custom-terraform-installer-task.TerraformInstaller@0
+              displayName: 'Install Terraform 1.3.6'
+              inputs:
+                terraformVersion: 1.3.6
+            - task: ms-devlabs.custom-terraform-tasks.custom-terraform-release-task.TerraformTaskV3@3
+              displayName: 'Terraform : Init'
+              inputs:
+                backendServiceArm: 'sp-terraform-SB-deploy'
+                backendAzureRmResourceGroupName: 'terraform_rg'
+                backendAzureRmStorageAccountName: terraformstatedmd
+                backendAzureRmContainerName: 'terraform-states'
+                backendAzureRmKey: tfsandbox
+            - task: ms-devlabs.custom-terraform-tasks.custom-terraform-release-task.TerraformTaskV3@3
+              displayName: 'Terraform : Plan'
+              inputs:
+                command: plan
+                commandOptions: '-out main.tfplan -var-file="env/dev.tfvars"'    
+                environmentServiceNameAzureRM: 'sp-terraform-SB-deploy'
+            - task: ms-devlabs.custom-terraform-tasks.custom-terraform-release-task.TerraformTaskV3@3
+              displayName: 'Terraform : Apply'
+              inputs:
+                command: apply    
+                commandOptions: 'main.tfplan'
+                environmentServiceNameAzureRM: 'sp-terraform-SB-deploy'
+  - stage: QA
+    displayName: Deploy to QA
+    jobs:
+    - deployment: DeployDev      
+      pool:
+        vmImage: ubuntu-latest
+      environment: 'sandbox-qa'
+      strategy:
+        runOnce:
+          deploy:
+            steps:
+            - checkout: self
+            - task: ms-devlabs.custom-terraform-tasks.custom-terraform-installer-task.TerraformInstaller@0
+              displayName: 'Install Terraform 1.3.6'
+              inputs:
+                terraformVersion: 1.3.6
+            - task: ms-devlabs.custom-terraform-tasks.custom-terraform-release-task.TerraformTaskV3@3
+              displayName: 'Terraform : Init'
+              inputs:
+                backendServiceArm: 'sp-terraform-SB-qa-deploy'
+                backendAzureRmResourceGroupName: 'terraform_rg'
+                backendAzureRmStorageAccountName: terraformstatedmd
+                backendAzureRmContainerName: 'terraform-states'
+                backendAzureRmKey: tfsandboxqa
+            - task: ms-devlabs.custom-terraform-tasks.custom-terraform-release-task.TerraformTaskV3@3
+              displayName: 'Terraform : Plan'
+              inputs:
+                command: plan
+                commandOptions: '-out main.tfplan -var-file="env/qa.tfvars"'    
+                environmentServiceNameAzureRM: 'sp-terraform-SB-qa-deploy'
+            - task: ms-devlabs.custom-terraform-tasks.custom-terraform-release-task.TerraformTaskV3@3
+              displayName: 'Terraform : Apply'
+              inputs:
+                command: apply    
+                commandOptions: 'main.tfplan'
+                environmentServiceNameAzureRM: 'sp-terraform-SB-qa-deploy'
+

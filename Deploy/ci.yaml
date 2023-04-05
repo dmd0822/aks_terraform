@@ -1,0 +1,27 @@
+name: $(SourceBranchName)_$(date:yyyyMMdd)$(rev:.r)
+
+trigger: none
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+- task: ms-devlabs.custom-terraform-tasks.custom-terraform-installer-task.TerraformInstaller@0
+  displayName: 'Install Terraform 1.3.6'
+  inputs:
+    terraformVersion: 1.3.6
+- task: ms-devlabs.custom-terraform-tasks.custom-terraform-release-task.TerraformTaskV3@3
+  displayName: 'Terraform : Init'
+  inputs:
+    backendServiceArm: 'sp-terraform-SB-deploy'
+    backendAzureRmResourceGroupName: 'terraform_rg'
+    backendAzureRmStorageAccountName: terraformstatedmd
+    backendAzureRmContainerName: 'terraform-states'
+    backendAzureRmKey: tfsandbox
+- task: ms-devlabs.custom-terraform-tasks.custom-terraform-release-task.TerraformTaskV3@3
+  displayName: 'Terraform : Plan'
+  inputs:
+    command: plan
+    commandOptions: '-var-file="env/dev.tfvars"'
+    environmentServiceNameAzureRM: 'sp-terraform-SB-deploy'
+
